@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pizzaventure — De Ultieme Lo‑Fi Anime Pizza Game</title>
+<link rel="icon" href="assets/favicon.ico">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;600;800&display=swap');
+  :root{
+    --bg1: #0f1724; --bg2:#1b2635; --accent:#ff8fa3; --accent2:#ffd19a; --muted:#9fb2c8;
+    --card: rgba(255,255,255,0.03);
+  }
+  *{box-sizing:border-box;font-family:Nunito, Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;}
+  html,body{height:100%;margin:0;background:linear-gradient(160deg,var(--bg1),var(--bg2));color:#e6eef8;-webkit-font-smoothing:antialiased;}
+  body::before{content:"";position:fixed;inset:0;background-image:url('assets/bg_lofi.png');background-size:cover;background-position:center;opacity:0.06;pointer-events:none}
+  header{display:flex;align-items:center;gap:16px;padding:14px 20px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border-bottom:1px solid rgba(255,255,255,0.03)}
+  h1{font-size:18px;margin:0;color:white}
+  main{display:flex;gap:18px;padding:18px;max-width:1200px;margin:12px auto}
+  .left, .right{background:var(--card);border-radius:12px;padding:14px;box-shadow: 0 10px 30px rgba(2,6,23,0.6);backdrop-filter:blur(2px)}
+  .left{flex:1;min-width:520px}
+  .right{width:360px;display:flex;flex-direction:column;gap:12px}
+  .kitchen{display:flex;gap:12px}
+  .worktop{flex:1;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);padding:12px;border-radius:10px;min-height:520px;display:flex;flex-direction:column;gap:12px}
+  .panel{background:transparent;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03)}
+  .ingredients{display:flex;flex-wrap:wrap;gap:8px}
+  .topping{padding:6px 8px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);cursor:pointer;border:1px solid rgba(255,255,255,0.02);user-select:none;min-width:84px;text-align:center}
+  .pizza-area{display:flex;gap:12px}
+  .pizza-canvas{width:320px;height:320px;background:radial-gradient(circle at 30% 20%, #f8e7cb, #f0cf96);border-radius:50%;box-shadow: inset 0 -12px 40px rgba(0,0,0,0.35);position:relative;overflow:hidden;margin:auto;border:6px solid rgba(255,255,255,0.02)}
+  .pizza-canvas .topping-item{position:absolute;transform:translate(-50%,-50%);pointer-events:none;transition:transform 0.2s ease}
+  .order-queue{width:260px;min-height:320px;overflow:auto;padding:8px;border-radius:8px}
+  .order{background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);padding:8px;margin-bottom:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);display:flex;gap:8px;align-items:center}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{background:linear-gradient(180deg,var(--accent),#ff3b3b);padding:8px 10px;border-radius:10px;border:none;color:white;cursor:pointer;box-shadow:0 6px 18px rgba(255,90,90,0.12);font-weight:700}
+  .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.05);color:var(--muted);box-shadow:none;font-weight:600}
+  .stats{display:flex;gap:8px;align-items:center}
+  .stat{background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;flex:1;text-align:center}
+  .shop{display:flex;flex-direction:column;gap:8px;overflow:auto;max-height:300px;padding-right:8px}
+  .upgrade{display:flex;justify-content:space-between;align-items:center;padding:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border-radius:8px;border:1px solid rgba(255,255,255,0.02)}
+  .mini{font-size:12px;color:var(--muted)}
+  .center{display:flex;align-items:center;justify-content:center;flex-direction:column}
+  footer{padding:12px;text-align:center;color:var(--muted);font-size:13px;margin-top:12px}
+  .audio-controls{display:flex;gap:8px;align-items:center;margin-left:auto}
+  .glow{box-shadow:0 6px 30px rgba(255,140,160,0.06)}
+  @media (max-width:980px){main{flex-direction:column}.right{width:100%}.left{min-width:unset}}
+</style>
+</head>
+<body>
+<header>
+  <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(45deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:800">PV</div>
+  <div>
+    <h1>Pizzaventure — Lo‑Fi Anime Edition</h1>
+    <div class="mini">Gemaakt voor Jaimy — lo‑fi vibes, anime UI, en alle pizza-functies.</div>
+  </div>
+  <div class="audio-controls" style="margin-left:auto">
+    <button class="btn secondary" id="toggleMusic">Speel muziek</button>
+    <button class="btn secondary" id="muteSfx">SFX</button>
+  </div>
+</header>
+<main>
+  <div class="left">
+    <div class="kitchen">
+      <div class="worktop">
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong>Bestellingen</strong>
+            <div class="mini">Queue: <span id="orderCount">0</span></div>
+          </div>
+          <div class="order-queue" id="orders"></div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:12px">
+          <div style="flex:1">
+            <div class="panel">
+              <strong>Pizza maken</strong>
+              <div class="pizza-area" style="margin-top:10px">
+                <div class="pizza-canvas panel" id="pizzaCanvas" draggable="false" aria-label="Pizza">
+                  <!-- toppings added dynamically -->
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+                  <div class="mini">Toppings - klik of sleep naar de pizza</div>
+                  <div class="ingredients" id="toppingsList"></div>
+                  <div class="controls" style="margin-top:8px">
+                    <button class="btn" id="startBake">Bak pizza</button>
+                    <button class="btn secondary" id="servePizza">Serveer</button>
+                    <button class="btn secondary" id="clearPizza">Wis</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel" style="margin-top:12px;">
+              <strong>Oven</strong>
+              <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+                <label class="mini">Temperatuur</label>
+                <input id="ovenTemp" type="range" min="150" max="400" value="220" style="flex:1"/>
+                <div class="mini" id="ovenTempVal">220°C</div>
+              </div>
+              <div style="margin-top:8px">
+                <div style="height:8px;background:rgba(255,255,255,0.04);border-radius:8px;overflow:hidden"><i id="bakeMeter" style="display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%"></i></div>
+                <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+                  <div class="mini">Status: <span id="ovenStatus">idle</span></div>
+                  <div class="mini" style="margin-left:auto">Tempsave: <span id="savedTemp">—</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel" style="margin-top:12px">
+              <strong>Mini-games & Interactions</strong>
+              <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                <button class="btn secondary" id="flipMini">Flip trick</button>
+                <button class="btn secondary" id="tossMini">Toss challenge</button>
+                <button class="btn secondary" id="sauceSwipe">Saus swipe</button>
+                <div class="mini" style="margin-left:auto">Achievements: <span id="achCount">0</span></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div style="width:320px;display:flex;flex-direction:column;gap:12px">
+            <div class="panel center glow">
+              <strong>Drive-thru</strong>
+              <div class="mini">Snelle bestellingen, minder betaald</div>
+              <div style="display:flex;gap:8px;margin-top:8px;width:100%">
+                <button class="btn" id="addDriveOrder">Voeg drive-bestelling toe</button>
+                <button class="btn secondary" id="processDrive">Process</button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <strong>Staff (Automatisch)</strong>
+              <div class="mini">Huur medewerkers om taken te automatiseren.</div>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="btn secondary" id="hireCook">Huur kok (€200)</button>
+                <button class="btn secondary" id="hireServer">Huur bediening (€150)</button>
+              </div>
+              <div class="mini" style="margin-top:8px">Gekochte: <span id="staffCount">0</span></div>
+            </div>
+
+            <div class="panel">
+              <strong>Challenges & Events</strong>
+              <div class="mini">Random uitdagingen: feest, stagiaire, ovenstoring.</div>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="btn secondary" id="triggerEvent">Trigger Event</button>
+                <button class="btn secondary" id="endDay">Einde dag</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <aside class="right">
+    <div class="panel stats">
+      <div class="stat"><div class="mini">Geld</div>€<div id="money2" style="font-weight:700">0</div></div>
+      <div class="stat"><div class="mini">Reputatie</div><div id="rep">50</div></div>
+      <div class="stat"><div class="mini">Klanten</div><div id="served">0</div></div>
+    </div>
+
+    <div class="panel shop">
+      <strong>Winkel & Upgrades</strong>
+      <div class="upgrade"><div><div>Snellere oven</div><div class="mini">Bakt 30% sneller</div></div><div><div class="mini price">€300</div><button class="btn" data-buy="fasterOven">Koop</button></div></div>
+      <div class="upgrade"><div><div>Extra medewerker</div><div class="mini">Automatiseert bakken</div></div><div><div class="mini price">€250</div><button class="btn" data-buy="autoCook">Koop</button></div></div>
+      <div class="upgrade"><div><div>VIP klanten</div><div class="mini">Betalen meer</div></div><div><div class="mini price">€400</div><button class="btn" data-buy="vip">Koop</button></div></div>
+      <div class="upgrade"><div><div>Brandvertrag</div><div class="mini">Minder kans op verbranden</div></div><div><div class="mini price">€200</div><button class="btn" data-buy="safeBake">Koop</button></div></div>
+      <div style="margin-top:8px" class="mini">Upgrades beïnvloeden gameplay en stapelen.</div>
+    </div>
+
+    <div class="panel">
+      <strong>Statistieken</strong>
+      <div class="mini" style="margin-top:8px">Vandaag geserveerd: <span id="servedToday">0</span></div>
+      <div class="mini">Beste dag: <span id="bestDay">0</span></div>
+    </div>
+
+  </aside>
+</main>
+
+<footer>Opslaan: lokaal opgeslagen in je browser. Gebruik 'Einde dag' om dagopbrengst te claimen. Veel plezier!</footer>
+
+<!-- Audio elements (placeholder files included in assets/) -->
+<audio id="bgMusic" loop preload="none">
+  <source src="assets/bg_music.mp3" type="audio/mpeg">
+  Je browser ondersteunt geen audio-tag.
+</audio>
+<audio id="sfxClick" preload="none"><source src="assets/click.mp3" type="audio/mpeg"></audio>
+<audio id="sfxOven" preload="none"><source src="assets/oven.mp3" type="audio/mpeg"></audio>
+
+<script>
+/* ------------ Game core (based on prior version) -------------- */
+const state = {
+  day: 1, money: 50, score: 0, rep:50, served:0, servedToday:0, bestDay:0,
+  staff: { cooks:0, servers:0 }, upgrades:{}, oven:{ temp:220, status:'idle', baking:false, speedMult:1 },
+  currentPizza:{ toppings:[], sauceSpread:0, bakedLevel:0, flipped:false }, orders:[], achievements:new Set(), settings:{ autosave:true }
+};
+
+const TOPPINGS = [
+  {id:'cheese', name:'Kaas', color:'#f6e27a', price:0.5},
+  {id:'pepperoni', name:'Pepperoni', color:'#b34848', price:1},
+  {id:'mushroom', name:'Champignon', color:'#cfc8b6', price:0.6},
+  {id:'olives', name:'Olijven', color:'#2e3b2b', price:0.6},
+  {id:'basil', name:'Basilicum', color:'#56a85b', price:0.3},
+  {id:'pineapple', name:'Ananas', color:'#ffd98f', price:0.8},
+  {id:'ham', name:'Ham', color:'#f0a6a6', price:0.9},
+  {id:'jalapeno', name:'Jalapeño', color:'#7ee57e', price:0.5},
+  {id:'onion', name:'Ui', color:'#e7d1f2', price:0.4},
+  {id:'bbqchicken', name:'BBQ Kip', color:'#f4cfa6', price:1.3},
+  {id:'anchovy', name:'Ansjovis', color:'#8fb0c1', price:1.5},
+  {id:'spinach', name:'Spinazie', color:'#2d6b40', price:0.4}
+];
+
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+function saveState(){ try{ localStorage.setItem('pizzav_state', JSON.stringify({...state, achievements:Array.from(state.achievements)})); }catch(e){console.warn('save failed',e);} }
+function loadState(){ const s = localStorage.getItem('pizzav_state'); if(s){ const parsed=JSON.parse(s); Object.assign(state, parsed); state.achievements=new Set(parsed.achievements||[]); renderAll(); } }
+
+/* UI Rendering */
+function renderToppings(){ const list = $('#toppingsList'); list.innerHTML=''; TOPPINGS.forEach(t=>{ const el=document.createElement('div'); el.className='topping'; el.draggable = true; el.dataset.id = t.id; el.innerHTML = `<strong>${t.name}</strong><div class="mini">€${t.price.toFixed(2)}</div>`; el.addEventListener('click', ()=>{ playSfx('click'); addTopping(t.id); }); el.addEventListener('dragstart', e=> e.dataTransfer.setData('text/plain', t.id)); list.appendChild(el); }); }
+
+function renderPizzaCanvas(){ const canvas = $('#pizzaCanvas'); canvas.innerHTML=''; const sauce = document.createElement('div'); sauce.style.position='absolute'; sauce.style.left='50%'; sauce.style.top='50%'; sauce.style.transform='translate(-50%,-50%)'; sauce.style.width = (60 + state.currentPizza.sauceSpread*0.6)+'%'; sauce.style.height = sauce.style.width; sauce.style.background = 'radial-gradient(circle at 30% 30%, rgba(210,60,40,0.94), rgba(180,40,30,0.85))'; sauce.style.borderRadius='50%'; sauce.style.opacity=0.88; sauce.style.pointerEvents='none'; canvas.appendChild(sauce); state.currentPizza.toppings.forEach((t,i)=>{ const td = TOPPINGS.find(x=>x.id===t.id); const el = document.createElement('div'); el.className='topping-item'; const x = 50 + (Math.sin(i*2.3)*30*(Math.random()*0.8+0.2)); const y = 50 + (Math.cos(i*1.2)*28*(Math.random()*0.8+0.2)); el.style.left = x + '%'; el.style.top = y + '%'; el.style.width = (12 + (Math.random()*14))+'px'; el.style.height = el.style.width; el.style.borderRadius='50%'; el.style.background = td.color; el.style.boxShadow = '0 4px 10px rgba(0,0,0,0.45)'; el.title = td.name; canvas.appendChild(el); }); const bake = document.createElement('div'); bake.style.position='absolute'; bake.style.left=0; bake.style.top=0; bake.style.right=0; bake.style.bottom=0; bake.style.pointerEvents='none'; const b = Math.min(1, state.currentPizza.bakedLevel/100); if(b>0){ bake.style.background = `linear-gradient(rgba(0,0,0,${b*0.14}), rgba(0,0,0,${b*0.3}))`; canvas.appendChild(bake); } }
+
+function renderOrders(){ const container = $('#orders'); container.innerHTML=''; state.orders.forEach(ord=>{ const el=document.createElement('div'); el.className='order'; const toppingsText = ord.toppings.map(t=>TOPPINGS.find(x=>x.id===t).name).join(', ') || 'Simpel'; el.innerHTML = `<div style="flex:1"><strong>#${ord.id} — ${ord.type}</strong><div class="mini">${toppingsText}</div><div class="mini">Waard: €${ord.price.toFixed(2)} • Geduld: <span data-patience="${ord.id}">${ord.patience}</span></div></div><div><button class="btn secondary" data-serve="${ord.id}">Pak op</button></div>`; container.appendChild(el); }); $('#orderCount').textContent = state.orders.length; }
+
+/* Gameplay functions */
+function addTopping(id){ state.currentPizza.toppings.push({id}); renderPizzaCanvas(); }
+function clearPizza(){ state.currentPizza = { toppings:[], sauceSpread:0, bakedLevel:0, flipped:false }; renderPizzaCanvas(); $('#bakeMeter').style.width='0%'; $('#ovenStatus').textContent='idle'; state.oven.baking=false; }
+function evaluatePizzaForOrder(pizza, order){ let score = 50; const want = order.toppings; const got = pizza.toppings.map(t=>t.id); const shared = want.filter(w=>got.includes(w)).length; const extra = got.filter(g=>!want.includes(g)).length; score += shared*10; score -= extra*6; const ideal = 70; const b = pizza.bakedLevel; score -= Math.abs(ideal - b)/2; score -= Math.abs(order.sauce - pizza.sauceSpread)/5; if(pizza.flipped) score += 8; return Math.max(0, Math.round(score)); }
+
+let ovenInterval = null;
+function startBaking(){ if(state.oven.baking) return; if(state.currentPizza.toppings.length===0) return alert('Voeg toppings toe!'); state.oven.baking = true; state.oven.status='baking'; $('#ovenStatus').textContent='baking'; playSfx('oven'); if(ovenInterval) clearInterval(ovenInterval); ovenInterval = setInterval(()=>{ const temp = state.oven.temp; let speed = (temp-150)/250; speed *= state.oven.speedMult || 1; if(state.upgrades.fasterOven) speed *= 1.3; state.currentPizza.bakedLevel += speed*2; const burnChance = Math.max(0, (state.currentPizza.bakedLevel-95)/50 - (state.upgrades.safeBake?0.25:0)); if(Math.random() < burnChance*0.02){ state.currentPizza.bakedLevel += Math.random()*6; state.rep = Math.max(0, state.rep - 2); addNotification('Uh oh — net verbrand!'); } const pct = Math.min(100, state.currentPizza.bakedLevel); $('#bakeMeter').style.width = pct + '%'; if(pct>=100){ state.oven.baking=false; state.oven.status='done'; $('#ovenStatus').textContent='done'; clearInterval(ovenInterval); ovenInterval = null; addNotification('Pizza klaar!'); } renderPizzaCanvas(); }, 300); }
+
+function servePizzaToOrder(orderId){ const idx = state.orders.findIndex(o=>o.id===orderId); if(idx<0) return alert('Bestelling niet gevonden'); const ord = state.orders[idx]; const match = evaluatePizzaForOrder(state.currentPizza, ord); const tip = Math.round(ord.price * (match/100)); const earned = ord.price + tip; state.money += earned; state.score += Math.round(match); state.rep = Math.min(100, state.rep + Math.round(match/10)); state.served += 1; state.servedToday += 1; state.orders.splice(idx,1); clearPizza(); renderAll(); addAchievementIf('firstServe', 'Serveer je eerste pizza'); if(state.money>1000) addAchievementIf('boss', 'Meer dan €1000'); playSfx('click'); }
+
+/* Orders and ticks */
+let orderIdCounter = 1;
+function spawnOrder(type='dine-in'){ const pick=(n)=>{ const shuffled = TOPPINGS.slice().sort(()=>Math.random()-0.5); return shuffled.slice(0,n).map(x=>x.id); }; const tcount = Math.max(0, Math.round(Math.random()*3)); const toppings = pick(tcount); const price = 3 + tcount*1.2 + Math.random()*2 + (type==='drive'? -1 : 0); const order={ id: orderIdCounter++, type, toppings, price: Math.max(2, price), patience: Math.round(30 + Math.random()*40), sauce: Math.round(Math.random()*40), created: Date.now() }; state.orders.push(order); renderOrders(); addAchievementIf('firstOrder','Ontvang je eerste bestelling'); }
+
+setInterval(()=>{ state.orders.forEach(o=>{ o.patience -= (1 + (state.staff.servers*0.1)); if(o.patience<=0){ state.rep = Math.max(0, state.rep - 5); const idx = state.orders.findIndex(x=>x.id===o.id); if(idx>=0) state.orders.splice(idx,1); addNotification('Een klant is weggelopen!'); } }); if(state.staff.servers>0 && state.orders.length>0){ const ord = state.orders[0]; spawnQuickAutoPizza(ord); } renderOrders(); if(state.settings.autosave) saveState(); }, 2000);
+
+function spawnQuickAutoPizza(ord){ const base = { toppings: [], sauceSpread: ord.sauce, bakedLevel:70, flipped:false }; if(ord.toppings.length>0) base.toppings.push({id: ord.toppings[0]}); const match = evaluatePizzaForOrder(base, ord); const earned = ord.price + Math.round(ord.price * (match/100) * 0.3); state.money += earned; state.score += Math.round(match*0.6); state.served += 1; state.servedToday += 1; const idx = state.orders.findIndex(o=>o.id===ord.id); if(idx>=0) state.orders.splice(idx,1); playSfx('click'); }
+
+/* UI events */
+$('#ovenTemp').addEventListener('input', (e)=>{ state.oven.temp = Number(e.target.value); $('#ovenTempVal').textContent = state.oven.temp + '°C'; });
+$('#startBake').addEventListener('click', ()=>{ startBaking(); });
+$('#servePizza').addEventListener('click', ()=>{ if(state.orders.length===0) return alert('Geen bestellingen!'); servePizzaToOrder(state.orders[0].id); });
+$('#clearPizza').addEventListener('click', ()=> clearPizza());
+$('#pizzaCanvas').addEventListener('dragover', (e)=>{ e.preventDefault(); });
+$('#pizzaCanvas').addEventListener('drop', (e)=>{ e.preventDefault(); const id = e.dataTransfer.getData('text/plain'); if(id) addTopping(id); });
+renderToppings(); renderPizzaCanvas();
+$('#orders').addEventListener('click', (e)=>{ const serve = e.target.closest('[data-serve]'); if(serve) servePizzaToOrder(Number(serve.dataset.serve)); });
+$$('[data-buy]').forEach(btn=> btn.addEventListener('click', (e)=>{ const key = e.target.dataset.buy; const price = Number(e.target.closest('.upgrade').querySelector('.price').textContent.replace('€','')) || 100; if(state.money < price) return alert('Niet genoeg geld.'); state.money -= price; state.upgrades[key] = (state.upgrades[key]||0) + 1; if(key==='fasterOven') state.oven.speedMult = (state.oven.speedMult||1) * 1.3; if(key==='autoCook') state.staff.cooks += 1; if(key==='vip') state.money += 0; if(key==='safeBake') {} addNotification('Upgrade gekocht: ' + key); renderAll(); }));
+$('#addDriveOrder').addEventListener('click', ()=> spawnOrder('drive'));
+$('#processDrive').addEventListener('click', ()=>{ const idx = state.orders.findIndex(o=>o.type==='drive'); if(idx>=0){ const ord = state.orders[idx]; state.money += ord.price * 0.8; state.orders.splice(idx,1); state.served += 1; state.servedToday +=1; addNotification('Drive-thru bestelling afgerekend'); renderAll(); } else addNotification('Geen drive-thru bestellingen'); });
+$('#hireCook').addEventListener('click', ()=>{ if(state.money < 200) return alert('Niet genoeg geld'); state.money -= 200; state.staff.cooks += 1; addNotification('Kok ingehuurd'); renderAll(); });
+$('#hireServer').addEventListener('click', ()=>{ if(state.money < 150) return alert('Niet genoeg geld'); state.money -= 150; state.staff.servers += 1; addNotification('Bediening ingehuurd'); renderAll(); });
+$('#triggerEvent').addEventListener('click', ()=> randomEvent());
+$('#endDay').addEventListener('click', ()=> endDay());
+$('#flipMini').addEventListener('click', ()=>{ const success = Math.random() < 0.6 + (state.score/2000); if(success){ state.currentPizza.flipped = true; addNotification('Flip geslaagd!'); state.score += 5; } else { addNotification('Flip mislukt!'); state.rep = Math.max(0, state.rep-2); } renderAll(); });
+$('#tossMini').addEventListener('click', ()=>{ const success = Math.random() < 0.5 + (state.staff.cooks*0.05); if(success){ addNotification('Toss perfect! +Reputatie'); state.rep = Math.min(100, state.rep+3); } else addNotification('Toss gemist!'); });
+$('#sauceSwipe').addEventListener('click', ()=>{ state.currentPizza.sauceSpread = Math.min(100, state.currentPizza.sauceSpread + Math.round(10 + Math.random()*30)); addNotification('Saus verspreid: ' + state.currentPizza.sauceSpread + '%'); renderPizzaCanvas(); });
+
+/* Events and helpers */
+function addNotification(txt){ const f = document.createElement('div'); f.textContent = txt; f.style.position='fixed'; f.style.right='18px'; f.style.top = (18 + Math.random()*200) + 'px'; f.style.background='linear-gradient(180deg, rgba(0,0,0,0.6), rgba(255,255,255,0.02))'; f.style.padding='8px 12px'; f.style.borderRadius='8px'; f.style.zIndex=9999; f.style.border='1px solid rgba(255,255,255,0.03)'; document.body.appendChild(f); setTimeout(()=> f.style.opacity='0.12', 1800); setTimeout(()=> f.remove(), 2500); }
+function addAchievementIf(key, desc){ if(state.achievements.has(key)) return; state.achievements.add(key); addNotification('Achievement: ' + desc); $('#achCount').textContent = state.achievements.size; }
+
+function randomEvent(){ const r = Math.random(); if(r<0.33){ state.oven.temp = Math.max(160, state.oven.temp - 40); addNotification('Ovenstoring: temp lager'); } else if(r<0.66){ state.rep = Math.max(0, state.rep - 5); addNotification('Rode recensie!'); } else { spawnOrder('dine-in'); addNotification('Drukke piek!'); } renderAll(); }
+
+function endDay(){ const bonus = Math.round(state.servedToday * (state.rep/100) * 2); state.money += bonus; addNotification('Einde dag: bonus €' + bonus); if(state.servedToday > state.bestDay) state.bestDay = state.servedToday; state.day += 1; state.servedToday = 0; state.orders = []; renderAll(); saveState(); }
+
+function renderAll(){ $('#money').textContent = state.money.toFixed(2); $('#money2').textContent = state.money.toFixed(2); $('#score').textContent = state.score; $('#rep').textContent = state.rep; $('#served').textContent = state.served; $('#servedToday').textContent = state.servedToday; $('#bestDay').textContent = state.bestDay; $('#day').textContent = state.day; $('#staffCount').textContent = (state.staff.cooks + state.staff.servers); $('#achCount').textContent = state.achievements.size; $('#savedTemp').textContent = state.savedTemp ? state.savedTemp + '°C' : '—'; renderPizzaCanvas(); renderOrders(); }
+
+/* Audio controls */
+const bgMusic = document.getElementById('bgMusic');
+const sfxClick = document.getElementById('sfxClick');
+const sfxOven = document.getElementById('sfxOven');
+let musicOn = false;
+let sfxOn = true;
+function playSfx(name){ if(!sfxOn) return; if(name==='click') { try{sfxClick.currentTime=0; sfxClick.play();}catch(e){} } if(name==='oven'){ try{sfxOven.currentTime=0; sfxOven.play();}catch(e){} } }
+$('#toggleMusic').addEventListener('click', ()=>{ if(!musicOn){ try{ bgMusic.play(); musicOn=true; $('#toggleMusic').textContent='Stop muziek'; }catch(e){ alert('Autoplay geblokkeerd — klik nogmaals of speel handmatig af.'); } } else { bgMusic.pause(); musicOn=false; $('#toggleMusic').textContent='Speel muziek'; } });
+$('#muteSfx').addEventListener('click', ()=>{ sfxOn=!sfxOn; $('#muteSfx').textContent = sfxOn? 'SFX' : 'SFX uit'; });
+
+/* Quick start */
+for(let i=0;i<3;i++) spawnOrder();
+renderAll();
+loadState();
+window.pizzaGame = { state, saveState, loadState, spawnOrder, startBaking, servePizzaToOrder };
+</script>
+</body>
+</html>
